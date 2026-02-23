@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Trophy, AlertTriangle, Target, Zap, Share2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
+import ShareCard from '@/components/ShareCard';
 
 interface ReviewData {
   id: string;
@@ -22,6 +23,7 @@ const Insights = () => {
   const navigate = useNavigate();
   const [review, setReview] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
     const fetchReview = async () => {
@@ -53,6 +55,7 @@ const Insights = () => {
   }
 
   const energyPercentage = (review.energy_score / 10) * 100;
+  const weekDateFormatted = new Date(review.week_start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="min-h-screen bg-background px-6 py-12">
@@ -66,43 +69,26 @@ const Insights = () => {
           animate={{ opacity: 1, y: 0 }}
         >
           <div className="text-center mb-12">
-            <span className="text-sm text-muted-foreground">
-              Week of {new Date(review.week_start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-            </span>
+            <span className="text-sm text-muted-foreground">Week of {weekDateFormatted}</span>
             <h1 className="font-serif text-4xl md:text-5xl text-foreground mt-2 mb-4">Your Week in Review</h1>
             <p className="text-muted-foreground max-w-xl mx-auto">{review.ai_summary}</p>
           </div>
 
           {/* Energy Score */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="glass-card p-6 mb-6"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-card p-6 mb-6">
             <div className="flex items-center gap-3 mb-4">
               <Zap className="w-5 h-5 text-primary" />
               <span className="text-sm text-muted-foreground">Energy Score</span>
               <span className="ml-auto font-serif text-2xl text-foreground">{review.energy_score}/10</span>
             </div>
             <div className="h-3 rounded-full bg-muted overflow-hidden">
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary"
-                initial={{ width: 0 }}
-                animate={{ width: `${energyPercentage}%` }}
-                transition={{ duration: 1, delay: 0.3 }}
-              />
+              <motion.div className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary" initial={{ width: 0 }} animate={{ width: `${energyPercentage}%` }} transition={{ duration: 1, delay: 0.3 }} />
             </div>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-6 mb-6">
             {/* Biggest Win */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="glass-card p-6"
-            >
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="glass-card p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <Trophy className="w-5 h-5 text-primary" />
@@ -113,12 +99,7 @@ const Insights = () => {
             </motion.div>
 
             {/* Blockers */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="glass-card p-6"
-            >
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="glass-card p-6">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-destructive/10 flex items-center justify-center">
                   <AlertTriangle className="w-5 h-5 text-destructive" />
@@ -130,12 +111,7 @@ const Insights = () => {
           </div>
 
           {/* Focus Items */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="glass-card p-6 mb-8"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-card p-6 mb-8">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
                 <Target className="w-5 h-5 text-accent" />
@@ -155,7 +131,7 @@ const Insights = () => {
           </motion.div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button variant="outline" onClick={() => toast.info('Sharing coming soon!')}>
+            <Button variant="outline" onClick={() => setShareOpen(true)}>
               <Share2 className="w-4 h-4 mr-2" /> Share Insights
             </Button>
             <Button onClick={() => navigate('/dashboard')}>
@@ -164,6 +140,16 @@ const Insights = () => {
           </div>
         </motion.div>
       </div>
+
+      <ShareCard
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        weekDate={weekDateFormatted}
+        wins={review.wins}
+        energyScore={review.energy_score}
+        focusItems={review.focus_items}
+        summary={review.ai_summary}
+      />
     </div>
   );
 };
