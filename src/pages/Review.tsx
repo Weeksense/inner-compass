@@ -37,28 +37,42 @@ const Review = () => {
       const answersObj: Record<string, string> = {};
       REVIEW_QUESTIONS.forEach((q, i) => { answersObj[`q${i + 1}`] = answers[i]; });
 
-      // Placeholder AI summary
-      const placeholderSummary = `Based on your reflection, this was a week of growth and challenges. You made meaningful progress while navigating obstacles.`;
+      // Call AI edge function for insights
+      let aiInsights = {
+        summary: 'Based on your reflection, this was a week of growth and challenges.',
+        biggest_win: answers[0],
+        blockers: answers[2],
+        focus_items: ['Apply your biggest learning', 'Address what held you back', 'Do more of what gave you energy'],
+        energy_score: 7,
+      };
+
+      try {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('generate-review-insights', {
+          body: { answers },
+        });
+        if (!fnError && fnData && !fnData.error) {
+          aiInsights = fnData;
+        } else {
+          console.warn('AI fallback used:', fnError || fnData?.error);
+        }
+      } catch (aiErr) {
+        console.warn('AI call failed, using fallback:', aiErr);
+      }
 
       const { data, error } = await supabase.from('reviews').insert({
         user_id: user!.id,
         week_start_date: weekStart.toISOString().split('T')[0],
         answers: answersObj,
-        ai_summary: placeholderSummary,
-        wins: answers[0],
-        blockers: answers[2],
-        focus_items: [
-          "Apply your biggest learning from this week",
-          "Address what held you back",
-          "Do more of what gave you energy",
-        ],
-        energy_score: 7,
+        ai_summary: aiInsights.summary,
+        wins: aiInsights.biggest_win,
+        blockers: aiInsights.blockers,
+        focus_items: aiInsights.focus_items,
+        energy_score: aiInsights.energy_score,
       }).select().single();
 
       if (error) throw error;
 
-      // Short delay for the beautiful loading animation
-      await new Promise(res => setTimeout(res, 2000));
+      await new Promise(res => setTimeout(res, 1500));
       navigate(`/insights/${data.id}`);
     } catch (err: any) {
       toast.error(err.message || 'Failed to save review');
