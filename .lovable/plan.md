@@ -1,24 +1,19 @@
 
 
-## Fix: Vercel SPA Routing (404 on page reload)
+## Fix: Review Calendar Not Showing Filled Dots
 
 ### Problem
-Vercel serves static files. When you visit `/admin` or reload `/dashboard`, the server looks for a file at that exact path. Since this is a Single Page App (all routing is handled by React Router in the browser), there's no actual file there -- so Vercel returns 404.
+The heatmap generates 52 dates by subtracting `i * 7` days from **today's date**. For example, if today is a Tuesday, all 52 generated dates will be Tuesdays. But `week_start_date` in the database is always set to the **Monday** of that week (set in `Review.tsx`). Since "2026-02-24" (Tuesday) never equals "2026-02-23" (Monday), the dots never light up.
 
 ### Solution
-Add a `vercel.json` configuration file to the project root that tells Vercel to redirect all requests to `index.html`, letting React Router handle the routing.
-
-### Changes
-
-**New file: `vercel.json`**
-- Add a single rewrite rule: all routes (`/(.*)`) get served by `/index.html`
-- This is the standard configuration for any SPA deployed on Vercel
+Adjust `getHeatmapWeeks()` so that each generated date snaps to the **Monday** of that week before comparing. This way the heatmap dates will match the stored `week_start_date` values.
 
 ### Technical Detail
-```text
-vercel.json
-  rewrites: [{ source: "/(.*)", destination: "/index.html" }]
-```
 
-After this change, redeploy on Vercel and all routes (`/admin`, `/dashboard`, `/insights/123`, etc.) will work correctly on direct access and page reload.
+**File: `src/pages/Dashboard.tsx`** -- Update `getHeatmapWeeks()`:
+
+- For each of the 52 weeks, calculate the date, then normalize it to the Monday of that week (same logic used elsewhere in the file for `thisWeekStart`)
+- Compare the resulting Monday ISO string against `week_start_date`
+
+This is a ~3-line change inside the existing loop in `getHeatmapWeeks`.
 
