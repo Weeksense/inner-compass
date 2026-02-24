@@ -23,6 +23,8 @@ import AdminGoals from "./pages/admin/AdminGoals";
 import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound";
 import SharedReview from "./pages/SharedReview";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +37,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/shared/:token" element={<SharedReview />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={

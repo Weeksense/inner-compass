@@ -4,8 +4,9 @@ import { useRef } from "react";
 import {
   ArrowRight, Sparkles, BarChart3, Brain, Target, Zap,
   Shield, Download, Calendar, TrendingUp, CheckCircle2,
-  Smartphone, Bell, X, Check, Star
+  Smartphone, Bell, X, Check, Star, HelpCircle
 } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import WeekSenseLogo from "@/components/WeekSenseLogo";
 
@@ -764,6 +765,80 @@ const Landing = () => {
         </div>
       </section>
 
+      {/* ═══════════════ FAQ ═══════════════ */}
+      <section id="faq" className="py-28 px-6">
+        <div className="container mx-auto max-w-3xl">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-80px" }}
+            variants={fadeUp}
+            className="text-center mb-16"
+          >
+            <span className="text-sm text-primary font-medium uppercase tracking-widest mb-4 block">FAQ</span>
+            <h2 className="font-serif text-4xl md:text-5xl text-foreground mb-4">
+              Frequently asked questions
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+              Everything you need to know about WeekSense.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-40px" }}
+            variants={fadeUp}
+          >
+            <Accordion type="single" collapsible className="w-full">
+              {[
+                {
+                  q: "What exactly is a weekly review?",
+                  a: "A weekly review is a short, guided reflection where you answer 7 thoughtful questions about your week — your wins, challenges, energy levels, and goals. It takes about 10 minutes and helps you process your week so you can start the next one with clarity and intention.",
+                },
+                {
+                  q: "How does the AI analysis work?",
+                  a: "After you complete a review, our AI reads your answers and generates a concise summary highlighting your biggest win, main blocker, and a clear focus for the upcoming week. Over time, it also identifies recurring patterns across multiple reviews — like what consistently drains or energizes you.",
+                },
+                {
+                  q: "Is my data private and secure?",
+                  a: "Absolutely. Your reflections are yours alone. We use row-level security so nobody — not even our team — can access your personal data. We never sell or share your information with third parties. Your privacy is non-negotiable.",
+                },
+                {
+                  q: "What's the difference between Free and Pro?",
+                  a: "The Free plan gives you 3 weekly reviews, AI insights, energy tracking, and a basic dashboard. Pro unlocks unlimited reviews, advanced pattern recognition, goal tracking, export & share features, the review calendar heatmap, and priority support — all for €4,99/month.",
+                },
+                {
+                  q: "Can I cancel my Pro subscription anytime?",
+                  a: "Yes, you can cancel at any time with no questions asked. Your data stays yours and you'll keep access to Pro features until the end of your billing period. After that, you'll return to the Free plan.",
+                },
+                {
+                  q: "When is the mobile app launching?",
+                  a: "The WeekSense mobile app for iOS and Android is currently in development. We're aiming for a launch later this year. Sign up now and you'll be the first to know when it's available — plus you'll get early access.",
+                },
+                {
+                  q: "Do I need to reflect every single week?",
+                  a: "Not at all! WeekSense works best as a weekly habit, but there's no pressure. Skip a week whenever you need to. Your streak will reset, but your past reviews and insights are always there waiting for you.",
+                },
+                {
+                  q: "How is this different from journaling?",
+                  a: "Unlike free-form journaling, WeekSense gives you structure with guided questions designed to extract meaningful insights. Plus, the AI analysis and long-term pattern tracking turn your reflections into actionable intelligence — something a blank page can't do.",
+                },
+              ].map((item, i) => (
+                <AccordionItem key={i} value={`faq-${i}`} className="border-border/30">
+                  <AccordionTrigger className="text-left font-serif text-lg text-foreground hover:no-underline hover:text-primary transition-colors py-5">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed text-sm pb-5">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </motion.div>
+        </div>
+      </section>
+
       {/* ═══════════════ FINAL CTA ═══════════════ */}
       <section className="py-28 px-6 relative">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -813,6 +888,7 @@ const Landing = () => {
               <ul className="space-y-2.5 text-sm text-muted-foreground">
                 <li><a href="#how-it-works" className="hover:text-foreground transition-colors">How it works</a></li>
                 <li><a href="#pricing" className="hover:text-foreground transition-colors">Pricing</a></li>
+                <li><a href="#faq" className="hover:text-foreground transition-colors">FAQ</a></li>
                 <li><span className="text-muted-foreground/50">Mobile App (soon)</span></li>
               </ul>
             </div>
@@ -827,8 +903,8 @@ const Landing = () => {
           <div className="border-t border-border/30 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">© 2026 WeekSense. All rights reserved.</p>
             <div className="flex gap-6 text-sm text-muted-foreground">
-              <span className="hover:text-foreground transition-colors cursor-pointer">Privacy</span>
-              <span className="hover:text-foreground transition-colors cursor-pointer">Terms</span>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+              <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
             </div>
           </div>
         </div>
