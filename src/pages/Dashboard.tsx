@@ -98,7 +98,12 @@ const Dashboard = () => {
 
     if (!thisWeekReview || thisWeekReview.length === 0) return;
 
-    // Check last review date to calculate streak
+    const thisWeekStr = thisWeekStart.toISOString().split('T')[0];
+
+    // If we already recorded this week, don't update streak again
+    if (profile.last_review_date === thisWeekStr) return;
+
+    // Calculate new streak
     const lastReviewDate = profile.last_review_date;
     let newStreak = 1;
     
@@ -106,26 +111,23 @@ const Dashboard = () => {
       const lastDate = new Date(lastReviewDate);
       const daysSinceLast = Math.floor((thisWeekStart.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
       
-      if (daysSinceLast <= 7) {
+      if (daysSinceLast >= 1 && daysSinceLast <= 7) {
         newStreak = (profile.streak_count || 0) + 1;
       }
     }
 
-    const currentStreak = profile.streak_count || 0;
-    if (newStreak !== currentStreak) {
-      const longestStreak = Math.max(newStreak, profile.longest_streak || 0);
-      await supabase.from('profiles').update({
-        streak_count: newStreak,
-        longest_streak: longestStreak,
-        last_review_date: thisWeekStart.toISOString().split('T')[0],
-      }).eq('user_id', user.id);
-      await refreshProfile();
+    const longestStreak = Math.max(newStreak, profile.longest_streak || 0);
+    await supabase.from('profiles').update({
+      streak_count: newStreak,
+      longest_streak: longestStreak,
+      last_review_date: thisWeekStr,
+    }).eq('user_id', user.id);
+    await refreshProfile();
 
-      // Check milestone
-      if (MILESTONES.includes(newStreak)) {
-        setShowMilestone(true);
-        setTimeout(() => setShowMilestone(false), 3000);
-      }
+    // Check milestone
+    if (MILESTONES.includes(newStreak)) {
+      setShowMilestone(true);
+      setTimeout(() => setShowMilestone(false), 3000);
     }
   };
 
