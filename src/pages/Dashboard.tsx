@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
 import { PenLine, Calendar, TrendingUp, ChevronRight, Sparkles, ArrowUpRight, ArrowDownRight, Minus, Loader2 } from 'lucide-react';
+import EnergyTrendChart from '@/components/EnergyTrendChart';
+import GoalsSection from '@/components/GoalsSection';
 
 interface ReviewSummary {
   id: string;
@@ -267,6 +269,12 @@ const Dashboard = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Energy Trend Chart */}
+        <EnergyTrendChart reviews={reviews} />
+
+        {/* Goals */}
+        <GoalsSection />
 
         {/* Patterns Section */}
         {reviews.length >= 2 && (
