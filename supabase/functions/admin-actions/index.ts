@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
 
       case "list_reviews": {
         const { page = 1, per_page = 50, user_id: uid, date_from, date_to } = params;
-        let query = adminClient.from("reviews").select("*, profiles(name, avatar_url)", { count: "exact" });
+        let query = adminClient.from("reviews").select("*", { count: "exact" });
         if (uid) query = query.eq("user_id", uid);
         if (date_from) query = query.gte("created_at", date_from);
         if (date_to) query = query.lte("created_at", date_to);
@@ -188,14 +188,29 @@ Deno.serve(async (req) => {
         query = query.order("created_at", { ascending: false }).range(from, from + per_page - 1);
         const { data, count, error } = await query;
         if (error) throw error;
-        return jsonResponse({ reviews: data, total: count });
+
+        // Fetch profiles separately
+        const userIds = [...new Set((data || []).map((r: any) => r.user_id))];
+        const { data: profiles } = userIds.length > 0
+          ? await adminClient.from("profiles").select("user_id, name, avatar_url").in("user_id", userIds)
+          : { data: [] };
+        const profileMap: Record<string, any> = {};
+        profiles?.forEach((p: any) => { profileMap[p.user_id] = p; });
+
+        const reviews = (data || []).map((r: any) => ({
+          ...r,
+          profiles: profileMap[r.user_id] ? { name: profileMap[r.user_id].name, avatar_url: profileMap[r.user_id].avatar_url } : { name: null, avatar_url: null },
+        }));
+
+        return jsonResponse({ reviews, total: count });
       }
 
       case "get_review": {
         const { review_id } = params;
-        const { data, error } = await adminClient.from("reviews").select("*, profiles(name, avatar_url)").eq("id", review_id).single();
+        const { data, error } = await adminClient.from("reviews").select("*").eq("id", review_id).single();
         if (error) throw error;
-        return jsonResponse(data);
+        const { data: profile } = await adminClient.from("profiles").select("name, avatar_url").eq("user_id", data.user_id).single();
+        return jsonResponse({ ...data, profiles: profile || { name: null, avatar_url: null } });
       }
 
       case "delete_review": {
