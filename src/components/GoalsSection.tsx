@@ -4,8 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Target, Plus, Check, Trash2, X } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Target, Plus, Check, Trash2, X, CalendarIcon, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface Goal {
   id: string;
@@ -18,10 +22,12 @@ interface Goal {
 const GoalsSection = () => {
   const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [completedGoals, setCompletedGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [newTitle, setNewTitle] = useState('');
-  const [newDate, setNewDate] = useState('');
+  const [newDate, setNewDate] = useState<Date | undefined>();
 
   useEffect(() => {
     if (!user) return;
@@ -29,13 +35,23 @@ const GoalsSection = () => {
   }, [user]);
 
   const fetchGoals = async () => {
-    const { data } = await supabase
-      .from('goals')
-      .select('*')
-      .eq('user_id', user!.id)
-      .eq('status', 'active')
-      .order('target_date', { ascending: true });
-    setGoals(data || []);
+    const [activeRes, completedRes] = await Promise.all([
+      supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('status', 'active')
+        .order('target_date', { ascending: true }),
+      supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', user!.id)
+        .eq('status', 'completed')
+        .order('updated_at', { ascending: false })
+        .limit(20),
+    ]);
+    setGoals(activeRes.data || []);
+    setCompletedGoals(completedRes.data || []);
     setLoading(false);
   };
 
@@ -44,7 +60,7 @@ const GoalsSection = () => {
     const { error } = await supabase.from('goals').insert({
       user_id: user!.id,
       title: newTitle.trim(),
-      target_date: newDate,
+      target_date: format(newDate, 'yyyy-MM-dd'),
     });
     if (error) {
       toast.error('Could not add goal');
@@ -52,13 +68,13 @@ const GoalsSection = () => {
     }
     toast.success('Goal added!');
     setNewTitle('');
-    setNewDate('');
+    setNewDate(undefined);
     setShowForm(false);
     fetchGoals();
   };
 
   const completeGoal = async (id: string) => {
-    await supabase.from('goals').update({ status: 'completed' }).eq('id', id);
+    await supabase.from('goals').update({ status: 'completed', updated_at: new Date().toISOString() }).eq('id', id);
     toast.success('Goal completed! 🎉');
     fetchGoals();
   };
@@ -88,14 +104,26 @@ const GoalsSection = () => {
       <div className="flex items-center gap-3 mb-4">
         <Target className="w-5 h-5 text-primary" />
         <h2 className="font-serif text-xl text-foreground">Goals</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto"
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-        </Button>
+        <div className="ml-auto flex items-center gap-1">
+          {completedGoals.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHistory(!showHistory)}
+              className="text-xs"
+            >
+              <Trophy className="w-3.5 h-3.5 mr-1" />
+              {showHistory ? 'Active' : `${completedGoals.length} completed`}
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowForm(!showForm)}
+          >
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          </Button>
+        </div>
       </div>
 
       {/* Add goal form */}
@@ -115,12 +143,30 @@ const GoalsSection = () => {
                 className="flex-1"
                 onKeyDown={(e) => e.key === 'Enter' && addGoal()}
               />
-              <Input
-                type="date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-                className="w-40"
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[180px] justify-start text-left font-normal",
+                      !newDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="w-4 h-4 mr-2" />
+                    {newDate ? format(newDate, "MMM d, yyyy") : "Target date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={newDate}
+                    onSelect={setNewDate}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
               <Button onClick={addGoal} disabled={!newTitle.trim() || !newDate} size="sm">
                 Add
               </Button>
@@ -129,47 +175,80 @@ const GoalsSection = () => {
         )}
       </AnimatePresence>
 
-      {/* Goals list */}
-      {goals.length === 0 ? (
-        <p className="text-sm text-muted-foreground py-2">
-          No active goals. Set one to stay focused!
-        </p>
-      ) : (
+      {/* Active goals */}
+      {!showHistory && (
+        <>
+          {goals.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">
+              No active goals. Set one to stay focused!
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {goals.map((goal, i) => {
+                const timeLabel = daysUntil(goal.target_date);
+                const isOverdue = timeLabel === 'Overdue';
+                return (
+                  <motion.div
+                    key={goal.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30 group"
+                  >
+                    <button
+                      onClick={() => completeGoal(goal.id)}
+                      className="w-6 h-6 rounded-full border-2 border-primary/40 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0"
+                      title="Mark complete"
+                    >
+                      <Check className="w-3 h-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-foreground truncate">{goal.title}</p>
+                      <p className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
+                        {timeLabel}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => archiveGoal(goal.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
+                      title="Remove"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Completed goals history */}
+      {showHistory && (
         <div className="space-y-2">
-          {goals.map((goal, i) => {
-            const timeLabel = daysUntil(goal.target_date);
-            const isOverdue = timeLabel === 'Overdue';
-            return (
+          {completedGoals.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">No completed goals yet.</p>
+          ) : (
+            completedGoals.map((goal, i) => (
               <motion.div
                 key={goal.id}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30 group"
+                transition={{ delay: i * 0.04 }}
+                className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30"
               >
-                <button
-                  onClick={() => completeGoal(goal.id)}
-                  className="w-6 h-6 rounded-full border-2 border-primary/40 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0"
-                  title="Mark complete"
-                >
-                  <Check className="w-3 h-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                </button>
+                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Check className="w-3 h-3 text-primary" />
+                </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground truncate">{goal.title}</p>
-                  <p className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    {timeLabel}
+                  <p className="text-sm text-foreground/70 line-through truncate">{goal.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Target: {new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </p>
                 </div>
-                <button
-                  onClick={() => archiveGoal(goal.id)}
-                  className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
-                  title="Remove"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </motion.div>
-            );
-          })}
+            ))
+          )}
         </div>
       )}
     </motion.div>
