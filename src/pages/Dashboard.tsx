@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { PenLine, LogOut, Calendar, TrendingUp, ChevronRight } from 'lucide-react';
+import Navbar from '@/components/Navbar';
+import { PenLine, Calendar, TrendingUp, ChevronRight } from 'lucide-react';
 
 interface ReviewSummary {
   id: string;
@@ -14,11 +15,14 @@ interface ReviewSummary {
   created_at: string;
 }
 
+const MILESTONES = [4, 8, 12, 16, 24, 52];
+
 const Dashboard = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [reviews, setReviews] = useState<ReviewSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showMilestone, setShowMilestone] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -32,7 +36,64 @@ const Dashboard = () => {
       setLoading(false);
     };
     fetchReviews();
+    updateStreak();
   }, [user]);
+
+  const updateStreak = async () => {
+    if (!user || !profile) return;
+    
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const thisWeekStart = new Date(now);
+    thisWeekStart.setDate(diff);
+    thisWeekStart.setHours(0, 0, 0, 0);
+
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+    // Check if there's a review this week
+    const { data: thisWeekReview } = await supabase
+      .from('reviews')
+      .select('id')
+      .eq('user_id', user.id)
+      .gte('week_start_date', thisWeekStart.toISOString().split('T')[0])
+      .limit(1);
+
+    if (!thisWeekReview || thisWeekReview.length === 0) return;
+
+    // Check last review date to calculate streak
+    const lastReviewDate = profile.last_review_date;
+    let newStreak = 1;
+    
+    if (lastReviewDate) {
+      const lastDate = new Date(lastReviewDate);
+      const daysSinceLast = Math.floor((thisWeekStart.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysSinceLast <= 7) {
+        newStreak = (profile.streak_count || 0) + 1;
+      }
+    }
+
+    const currentStreak = profile.streak_count || 0;
+    if (newStreak !== currentStreak) {
+      const longestStreak = Math.max(newStreak, profile.longest_streak || 0);
+      await supabase.from('profiles').update({
+        streak_count: newStreak,
+        longest_streak: longestStreak,
+        last_review_date: thisWeekStart.toISOString().split('T')[0],
+      }).eq('user_id', user.id);
+      await refreshProfile();
+
+      // Check milestone
+      if (MILESTONES.includes(newStreak)) {
+        setShowMilestone(true);
+        setTimeout(() => setShowMilestone(false), 3000);
+      }
+    }
+  };
+
+  const streak = profile?.streak_count || 0;
 
   // Build heatmap data for last 52 weeks
   const getHeatmapWeeks = () => {
@@ -54,23 +115,50 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <nav className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="font-serif text-xl text-foreground">WeeklyReview</span>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground hidden sm:block">
-              {profile?.name || user?.email}
-            </span>
-            <Button variant="ghost" size="sm" onClick={() => { signOut(); navigate('/'); }}>
-              <LogOut className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
+
+      {/* Milestone celebration overlay */}
+      <AnimatePresence>
+        {showMilestone && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none"
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
+              transition={{ type: 'spring', damping: 15 }}
+              className="text-center"
+            >
+              <div className="text-7xl mb-4">🔥</div>
+              <div className="font-serif text-4xl text-primary glow-primary px-8 py-4 rounded-2xl bg-background/90 backdrop-blur-xl border border-primary/30">
+                {streak} Week Streak!
+              </div>
+              <div className="mt-2 text-muted-foreground">You're on fire! Keep going.</div>
+            </motion.div>
+            {/* Particle glow */}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-2 h-2 rounded-full bg-primary"
+                initial={{ x: 0, y: 0, opacity: 1 }}
+                animate={{
+                  x: Math.cos((i / 12) * Math.PI * 2) * 200,
+                  y: Math.sin((i / 12) * Math.PI * 2) * 200,
+                  opacity: 0,
+                }}
+                transition={{ duration: 1.5, delay: 0.2 }}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="container mx-auto max-w-4xl px-6 py-12">
-        {/* Welcome & CTA */}
+        {/* Welcome & Streak */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -79,6 +167,23 @@ const Dashboard = () => {
           <h1 className="font-serif text-4xl text-foreground mb-2">
             {profile?.name ? `Hey, ${profile.name}` : 'Your Dashboard'}
           </h1>
+
+          {/* Streak display */}
+          <div className="mb-4">
+            {streak > 0 ? (
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-2"
+              >
+                <span className="text-2xl">🔥</span>
+                <span className="text-lg font-semibold text-primary">{streak} week streak</span>
+              </motion.div>
+            ) : (
+              <p className="text-muted-foreground">Start your streak this week</p>
+            )}
+          </div>
+
           <p className="text-muted-foreground mb-6">
             {reviews.length === 0
               ? "Ready for your first weekly review?"
@@ -107,9 +212,7 @@ const Dashboard = () => {
                 key={i}
                 title={w.date.toLocaleDateString()}
                 className={`w-3.5 h-3.5 rounded-sm transition-colors ${
-                  w.hasReview
-                    ? 'bg-primary'
-                    : 'bg-muted/50'
+                  w.hasReview ? 'bg-primary' : 'bg-muted/50'
                 }`}
               />
             ))}

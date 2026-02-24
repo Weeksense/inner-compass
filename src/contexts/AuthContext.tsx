@@ -9,6 +9,10 @@ interface Profile {
   review_day: number;
   review_time: string | null;
   streak_count: number;
+  longest_streak: number;
+  last_review_date: string | null;
+  avatar_url: string | null;
+  language: string | null;
   created_at: string;
 }
 
