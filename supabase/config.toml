@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.analyze-patterns]
 verify_jwt = false
+
+[functions.admin-actions]
+verify_jwt = false
