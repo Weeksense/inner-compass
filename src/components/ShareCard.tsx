@@ -1,12 +1,14 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Zap, Target, X, Download, Copy } from 'lucide-react';
+import { Trophy, Zap, Target, X, Download, Copy, Link, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ShareCardProps {
   open: boolean;
   onClose: () => void;
+  reviewId: string;
   weekDate: string;
   wins: string;
   energyScore: number;
@@ -14,8 +16,10 @@ interface ShareCardProps {
   summary: string;
 }
 
-const ShareCard = ({ open, onClose, weekDate, wins, energyScore, focusItems, summary }: ShareCardProps) => {
+const ShareCard = ({ open, onClose, reviewId, weekDate, wins, energyScore, focusItems, summary }: ShareCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [copyingLink, setCopyingLink] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const copyAsText = () => {
     const text = `📝 My Weekly Review — ${weekDate}\n\n🏆 Biggest Win: ${wins}\n⚡ Energy: ${energyScore}/10\n\n🎯 Focus for Next Week:\n${focusItems.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nJust did my weekly reflection with WeekSense ✦ weeksense.com`;
@@ -38,6 +42,41 @@ const ShareCard = ({ open, onClose, weekDate, wins, energyScore, focusItems, sum
       toast.success('Image downloaded!');
     } catch {
       toast.error('Could not generate image. Try copying as text instead.');
+    }
+  };
+
+  const copyPublicLink = async () => {
+    setCopyingLink(true);
+    try {
+      // Check if review already has a share token
+      const { data: existing } = await supabase
+        .from('reviews')
+        .select('share_token')
+        .eq('id', reviewId)
+        .single();
+
+      let token = existing?.share_token;
+
+      if (!token) {
+        // Generate a new token
+        token = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+        const { error } = await supabase
+          .from('reviews')
+          .update({ share_token: token })
+          .eq('id', reviewId);
+        if (error) throw error;
+      }
+
+      const url = `${window.location.origin}/shared/${token}`;
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      toast.success('Public link copied!');
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch (err) {
+      console.error('Failed to generate share link:', err);
+      toast.error('Could not generate share link');
+    } finally {
+      setCopyingLink(false);
     }
   };
 
@@ -155,7 +194,17 @@ const ShareCard = ({ open, onClose, weekDate, wins, energyScore, focusItems, sum
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 mt-4 justify-center">
+          <div className="flex flex-wrap gap-3 mt-4 justify-center">
+            <Button variant="outline" onClick={copyPublicLink} disabled={copyingLink}>
+              {copyingLink ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : linkCopied ? (
+                <Check className="w-4 h-4 mr-2" />
+              ) : (
+                <Link className="w-4 h-4 mr-2" />
+              )}
+              {linkCopied ? 'Copied!' : 'Copy Public Link'}
+            </Button>
             <Button variant="outline" onClick={copyAsText}>
               <Copy className="w-4 h-4 mr-2" /> Copy as Text
             </Button>

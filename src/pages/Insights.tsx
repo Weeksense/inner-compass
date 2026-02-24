@@ -144,6 +144,7 @@ const Insights = () => {
       <ShareCard
         open={shareOpen}
         onClose={() => setShareOpen(false)}
+        reviewId={review.id}
         weekDate={weekDateFormatted}
         wins={review.wins}
         energyScore={review.energy_score}
