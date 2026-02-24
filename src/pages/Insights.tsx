@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Trophy, AlertTriangle, Target, Zap, Share2, ArrowRight } from 'lucide-react';
+import { Trophy, AlertTriangle, Target, Zap, Share2, ArrowRight, Link2Off } from 'lucide-react';
 import { toast } from 'sonner';
 import ShareCard from '@/components/ShareCard';
 
@@ -16,7 +16,31 @@ interface ReviewData {
   energy_score: number;
   answers: Record<string, string>;
   week_start_date: string;
+  share_token: string | null;
 }
+
+/** Parse a value that might be a JSON array string, a plain string, or null into readable text */
+const formatTextOrArray = (value: string | null | undefined, fallback: string): React.ReactNode => {
+  if (!value) return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return (
+        <ul className="space-y-2">
+          {parsed.map((item, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="text-muted-foreground mt-1">•</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+  } catch {
+    // Not JSON, just render as string
+  }
+  return value;
+};
 
 const Insights = () => {
   const { id } = useParams();
@@ -24,6 +48,7 @@ const Insights = () => {
   const [review, setReview] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [shareOpen, setShareOpen] = useState(false);
+  const [revoking, setRevoking] = useState(false);
 
   useEffect(() => {
     const fetchReview = async () => {
@@ -40,11 +65,28 @@ const Insights = () => {
       setReview({
         ...data,
         focus_items: (data.focus_items as string[]) || [],
+        share_token: data.share_token ?? null,
       });
       setLoading(false);
     };
     fetchReview();
   }, [id]);
+
+  const revokeShareLink = async () => {
+    if (!review) return;
+    setRevoking(true);
+    const { error } = await supabase
+      .from('reviews')
+      .update({ share_token: null })
+      .eq('id', review.id);
+    if (error) {
+      toast.error('Could not revoke link');
+    } else {
+      setReview({ ...review, share_token: null });
+      toast.success('Public link revoked');
+    }
+    setRevoking(false);
+  };
 
   if (loading || !review) {
     return (
@@ -95,7 +137,9 @@ const Insights = () => {
                 </div>
                 <h3 className="font-serif text-xl text-foreground">Your Biggest Win</h3>
               </div>
-              <p className="text-secondary-foreground leading-relaxed">{review.wins || 'No wins recorded'}</p>
+              <div className="text-secondary-foreground leading-relaxed">
+                {formatTextOrArray(review.wins, 'No wins recorded')}
+              </div>
             </motion.div>
 
             {/* Blockers */}
@@ -106,7 +150,9 @@ const Insights = () => {
                 </div>
                 <h3 className="font-serif text-xl text-foreground">What Held You Back</h3>
               </div>
-              <p className="text-secondary-foreground leading-relaxed">{review.blockers || 'No blockers recorded'}</p>
+              <div className="text-secondary-foreground leading-relaxed">
+                {formatTextOrArray(review.blockers, 'No blockers recorded')}
+              </div>
             </motion.div>
           </div>
 
@@ -130,10 +176,15 @@ const Insights = () => {
             </div>
           </motion.div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button variant="outline" onClick={() => setShareOpen(true)}>
               <Share2 className="w-4 h-4 mr-2" /> Share Insights
             </Button>
+            {review.share_token && (
+              <Button variant="ghost" onClick={revokeShareLink} disabled={revoking} className="text-destructive hover:text-destructive">
+                <Link2Off className="w-4 h-4 mr-2" /> Revoke Public Link
+              </Button>
+            )}
             <Button onClick={() => navigate('/dashboard')}>
               Go to Dashboard <ArrowRight className="ml-2 w-4 h-4" />
             </Button>
