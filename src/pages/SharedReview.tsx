@@ -1,9 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { Trophy, AlertTriangle, Target, Zap } from 'lucide-react';
 import WeekSenseLogo from '@/components/WeekSenseLogo';
+
+/** Parse a value that might be a JSON array string into readable text */
+const formatTextOrArray = (value: string | null | undefined, fallback: string): React.ReactNode => {
+  if (!value) return fallback;
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return (
+        <ul className="space-y-2">
+          {parsed.map((item, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <span className="text-muted-foreground mt-1">•</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    }
+  } catch {
+    // Not JSON
+  }
+  return value;
+};
 
 interface SharedReviewData {
   wins: string;
@@ -110,7 +134,7 @@ const SharedReview = () => {
                 </div>
                 <h3 className="font-serif text-xl text-foreground">Biggest Win</h3>
               </div>
-              <p className="text-secondary-foreground leading-relaxed">{review.wins || 'No wins recorded'}</p>
+              <div className="text-secondary-foreground leading-relaxed">{formatTextOrArray(review.wins, 'No wins recorded')}</div>
             </motion.div>
 
             {/* Blockers */}
@@ -121,7 +145,7 @@ const SharedReview = () => {
                 </div>
                 <h3 className="font-serif text-xl text-foreground">What Held Back</h3>
               </div>
-              <p className="text-secondary-foreground leading-relaxed">{review.blockers || 'No blockers recorded'}</p>
+              <div className="text-secondary-foreground leading-relaxed">{formatTextOrArray(review.blockers, 'No blockers recorded')}</div>
             </motion.div>
           </div>
 
