@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: `Unknown action: ${action}` }, 400);
     }
   } catch (err: any) {
-    console.error("Admin action error:", err);
+    console.error("Admin action error:", err?.message, err?.stack || err);
     return jsonResponse({ error: err.message || "Internal server error" }, 500);
   }
 });
