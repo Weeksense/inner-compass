@@ -1,6 +1,6 @@
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import {
   ArrowRight, Sparkles, BarChart3, Brain, Target, Zap,
   Shield, Download, Calendar, TrendingUp, CheckCircle2,
@@ -25,6 +25,7 @@ const scaleIn = {
 };
 
 const Landing = () => {
+  const [yearly, setYearly] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroY = useTransform(scrollYProgress, [0, 1], [0, 150]);
@@ -666,6 +667,25 @@ const Landing = () => {
             <p className="text-muted-foreground text-lg max-w-lg mx-auto">
               No credit card required. No trial limits. Upgrade only when WeekSense becomes essential to your week.
             </p>
+
+            {/* Billing toggle */}
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <span className={`text-sm transition-colors ${!yearly ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>Monthly</span>
+              <button
+                onClick={() => setYearly(!yearly)}
+                className={`relative w-14 h-7 rounded-full transition-colors ${yearly ? 'bg-primary' : 'bg-muted/60'}`}
+              >
+                <motion.div
+                  className="absolute top-0.5 w-6 h-6 rounded-full bg-background shadow-md"
+                  animate={{ left: yearly ? '1.75rem' : '0.125rem' }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                />
+              </button>
+              <span className={`text-sm transition-colors ${yearly ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                Yearly
+                <span className="ml-2 text-xs text-primary font-semibold">Save 17%</span>
+              </span>
+            </div>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
@@ -731,10 +751,22 @@ const Landing = () => {
               <h3 className="font-serif text-2xl text-foreground mb-1">Pro</h3>
               <p className="text-muted-foreground text-sm mb-6">For the intentional ones</p>
               <div className="mb-2">
-                <span className="font-serif text-5xl text-foreground">€4,99</span>
-                <span className="text-muted-foreground ml-1">/month</span>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={yearly ? 'yearly' : 'monthly'}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <span className="font-serif text-5xl text-foreground">{yearly ? '€49,90' : '€4,99'}</span>
+                    <span className="text-muted-foreground ml-1">{yearly ? '/year' : '/month'}</span>
+                  </motion.div>
+                </AnimatePresence>
               </div>
-              <p className="text-xs text-primary mb-8">Less than a coffee per week ☕</p>
+              <p className="text-xs text-primary mb-8">
+                {yearly ? '2 months free — that\'s €4,16/month ☕' : 'Less than a coffee per week ☕'}
+              </p>
               <ul className="space-y-3.5 mb-8">
                 {[
                   { text: "Unlimited weekly reviews", included: true },
