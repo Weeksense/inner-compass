@@ -12,8 +12,8 @@ import { toast } from 'sonner';
 const slides = [
   {
     icon: <Sparkles className="w-12 h-12 text-primary" />,
-    title: "Welcome to WeeklyReview",
-    desc: "You're about to build a habit that changes everything: understanding your own weeks.",
+    title: "Welcome to WeekSense",
+    desc: "You're about to build a habit that changes everything: making sense of your own weeks.",
   },
   {
     icon: <BookOpen className="w-12 h-12 text-primary" />,

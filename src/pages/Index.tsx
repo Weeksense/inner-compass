@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowRight, Sparkles, BarChart3, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import WeekSenseLogo from "@/components/WeekSenseLogo";
 
 const Landing = () => {
   return (
@@ -9,7 +10,7 @@ const Landing = () => {
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <span className="font-serif text-xl text-foreground">WeeklyReview</span>
+          <WeekSenseLogo />
           <div className="flex items-center gap-4">
             <Link to="/auth?mode=login">
               <Button variant="ghost" size="sm">Log in</Button>
@@ -41,7 +42,7 @@ const Landing = () => {
             </div>
 
             <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl text-foreground leading-[1.1] mb-6">
-              Finally understand
+              Make sense of
               <br />
               <span className="text-gradient-primary">your own weeks.</span>
             </h1>
@@ -181,8 +182,8 @@ const Landing = () => {
       {/* Footer */}
       <footer className="border-t border-border/50 py-12 px-6">
         <div className="container mx-auto max-w-5xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <span className="font-serif text-lg text-foreground">WeeklyReview</span>
-          <p className="text-sm text-muted-foreground">© 2026 WeeklyReview. Reflect intentionally.</p>
+          <WeekSenseLogo />
+          <p className="text-sm text-muted-foreground">© 2026 WeekSense. All rights reserved.</p>
         </div>
       </footer>
     </div>

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogOut } from 'lucide-react';
+import WeekSenseLogo from '@/components/WeekSenseLogo';
 
 const Navbar = () => {
   const { user, profile, signOut } = useAuth();
@@ -16,8 +17,8 @@ const Navbar = () => {
   return (
     <nav className="border-b border-border/50 bg-background/80 backdrop-blur-xl sticky top-0 z-50">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-        <button onClick={() => navigate('/dashboard')} className="font-serif text-xl text-foreground hover:text-primary transition-colors">
-          WeeklyReview
+        <button onClick={() => navigate('/dashboard')} className="hover:opacity-80 transition-opacity">
+          <WeekSenseLogo />
         </button>
         <div className="flex items-center gap-3">
           <button

@@ -63,8 +63,8 @@ Deno.serve(async (req) => {
 <head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background-color:#0a0a0f;font-family:'Helvetica Neue',Arial,sans-serif;">
   <div style="max-width:520px;margin:0 auto;padding:48px 24px;">
-    <h1 style="color:#f5a623;font-size:28px;margin:0 0 8px;">WeeklyReview</h1>
-    <p style="color:#a0a0b0;font-size:14px;margin:0 0 32px;">Your reflection time is here</p>
+    <h1 style="color:#f5a623;font-size:28px;margin:0 0 8px;">WeekSense</h1>
+    <p style="color:#a0a0b0;font-size:14px;margin:0 0 32px;">Make sense of your week</p>
     
     <div style="background-color:#14141f;border:1px solid #1e1e2e;border-radius:16px;padding:32px;">
       <p style="color:#f0f0f5;font-size:18px;margin:0 0 12px;">Hey ${firstName} 👋</p>
@@ -72,14 +72,14 @@ Deno.serve(async (req) => {
         It's time for your weekly review. Take 10 minutes to reflect on what worked, what didn't, and what you want to focus on next week.
       </p>
       <p style="color:#f5a623;font-size:14px;margin:0 0 24px;">🔥 ${streakText}</p>
-      <a href="https://id-preview--02dec461-9558-4082-854a-feaf931e5eef.lovable.app/review"
+      <a href="https://weeksense.com/review"
          style="display:inline-block;background-color:#f5a623;color:#0a0a0f;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
         Start Your Review →
       </a>
     </div>
     
     <p style="color:#555;font-size:12px;margin:32px 0 0;text-align:center;">
-      WeeklyReview – understand your own weeks.
+      WeekSense – make sense of your week. <a href="https://weeksense.com" style="color:#666;text-decoration:underline;">weeksense.com</a>
     </p>
   </div>
 </body>
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'WeeklyReview <onboarding@resend.dev>',
+          from: 'WeekSense <onboarding@resend.dev>',
           to: [email],
           subject: 'Your weekly reflection is waiting 🔥',
           html,

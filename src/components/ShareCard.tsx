@@ -18,7 +18,7 @@ const ShareCard = ({ open, onClose, weekDate, wins, energyScore, focusItems, sum
   const cardRef = useRef<HTMLDivElement>(null);
 
   const copyAsText = () => {
-    const text = `📝 My Weekly Review — ${weekDate}\n\n🏆 Biggest Win: ${wins}\n⚡ Energy: ${energyScore}/10\n\n🎯 Focus for Next Week:\n${focusItems.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\n— Made with WeeklyReview`;
+    const text = `📝 My Weekly Review — ${weekDate}\n\n🏆 Biggest Win: ${wins}\n⚡ Energy: ${energyScore}/10\n\n🎯 Focus for Next Week:\n${focusItems.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nJust did my weekly reflection with WeekSense ✦ weeksense.com`;
     navigator.clipboard.writeText(text);
     toast.success('Copied to clipboard!');
   };
@@ -71,7 +71,7 @@ const ShareCard = ({ open, onClose, weekDate, wins, energyScore, focusItems, sum
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
               <span style={{ fontSize: '0.75rem', color: 'hsl(240 5% 55%)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                Weekly Review
+                WeekSense
               </span>
             </div>
             <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '1.5rem', color: 'hsl(0 0% 95%)', marginBottom: '0.25rem' }}>
@@ -149,7 +149,7 @@ const ShareCard = ({ open, onClose, weekDate, wins, energyScore, focusItems, sum
 
             <div style={{ marginTop: '1rem', textAlign: 'right' as const }}>
               <span style={{ fontSize: '0.65rem', color: 'hsl(240 5% 40%)', fontStyle: 'italic' }}>
-                weeklyreview.app
+                weeksense.com
               </span>
             </div>
           </div>
