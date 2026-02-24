@@ -10,12 +10,18 @@ const MaintenanceGuard: React.FC<{ children: React.ReactNode }> = ({ children })
 
   useEffect(() => {
     const check = async () => {
-      const { data } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'maintenance_mode')
-        .single();
-      setMaintenance(data?.value === 'true');
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'maintenance_mode')
+          .single();
+        if (!error && data) {
+          setMaintenance(data.value === 'true');
+        }
+      } catch {
+        // Table may not exist yet — default to no maintenance
+      }
       setChecked(true);
     };
     check();
