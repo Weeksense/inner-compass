@@ -30,18 +30,11 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify user via getClaims
+    // Verify user identity
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
-    }
-
-    // For admin role check, we need the full user (app_metadata isn't in JWT claims by default)
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
       return jsonResponse({ error: "Unauthorized" }, 401);
