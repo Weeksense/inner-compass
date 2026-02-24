@@ -140,6 +140,9 @@ const Dashboard = () => {
     for (let i = 51; i >= 0; i--) {
       const d = new Date(now);
       d.setDate(d.getDate() - i * 7);
+      // Snap to Monday of that week
+      const day = d.getDay();
+      d.setDate(d.getDate() - ((day + 6) % 7));
       const weekStr = d.toISOString().split('T')[0];
       weeks.push({
         date: d,
