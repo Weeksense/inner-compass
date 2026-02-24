@@ -108,6 +108,10 @@ const Profile = () => {
     setDeleting(true);
     try {
       // Delete user data
+      await supabase.from('goal_progress').delete().in('goal_id', 
+        (await supabase.from('goals').select('id').eq('user_id', user.id)).data?.map(g => g.id) || []
+      );
+      await supabase.from('goals').delete().eq('user_id', user.id);
       await supabase.from('reviews').delete().eq('user_id', user.id);
       await supabase.from('patterns').delete().eq('user_id', user.id);
       await supabase.from('profiles').delete().eq('user_id', user.id);
