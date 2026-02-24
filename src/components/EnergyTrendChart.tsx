@@ -61,16 +61,6 @@ const EnergyTrendChart = ({ reviews }: EnergyChartProps) => {
               tickLine={false}
               ticks={[0, 5, 10]}
             />
-            <Tooltip
-              contentStyle={{
-                background: 'hsl(var(--card))',
-                border: '1px solid hsl(var(--border))',
-                borderRadius: '0.75rem',
-                fontSize: '0.8rem',
-                color: 'hsl(var(--foreground))',
-              }}
-              labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-            />
             <Area
               type="monotone"
               dataKey="energy"
@@ -78,7 +68,7 @@ const EnergyTrendChart = ({ reviews }: EnergyChartProps) => {
               strokeWidth={2.5}
               fill="url(#energyGradient)"
               dot={{ r: 4, fill: 'hsl(var(--primary))', stroke: 'hsl(var(--background))', strokeWidth: 2 }}
-              activeDot={{ r: 6, fill: 'hsl(var(--primary))' }}
+              activeDot={false}
             />
           </AreaChart>
         </ResponsiveContainer>

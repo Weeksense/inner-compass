@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Target, Plus, Check, Trash2, X, CalendarIcon, Trophy, TrendingUp } from 'lucide-react';
+import { Target, Plus, Check, Trash2, X, CalendarIcon, Trophy, TrendingUp, ChevronLeft, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 interface Goal {
   id: string;
@@ -19,8 +20,17 @@ interface Goal {
   created_at: string;
 }
 
+interface LinkedReview {
+  id: string;
+  week_start_date: string;
+  wins: string;
+  energy_score: number;
+  created_at: string;
+}
+
 const GoalsSection = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [completedGoals, setCompletedGoals] = useState<Goal[]>([]);
   const [progressCounts, setProgressCounts] = useState<Record<string, number>>({});
@@ -29,6 +39,9 @@ const GoalsSection = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDate, setNewDate] = useState<Date | undefined>();
+  const [selectedGoal, setSelectedGoal] = useState<Goal | null>(null);
+  const [linkedReviews, setLinkedReviews] = useState<LinkedReview[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -56,7 +69,6 @@ const GoalsSection = () => {
     setGoals(activeRes.data || []);
     setCompletedGoals(completedRes.data || []);
 
-    // Fetch progress counts for all goals
     if (allGoals.length > 0) {
       const goalIds = allGoals.map((g) => g.id);
       const { data: progressData } = await supabase
@@ -72,6 +84,29 @@ const GoalsSection = () => {
     }
 
     setLoading(false);
+  };
+
+  const openGoalDetail = async (goal: Goal) => {
+    setSelectedGoal(goal);
+    setDetailLoading(true);
+    
+    const { data: progressData } = await supabase
+      .from('goal_progress')
+      .select('review_id')
+      .eq('goal_id', goal.id);
+
+    if (progressData && progressData.length > 0) {
+      const reviewIds = progressData.map((p) => p.review_id);
+      const { data: reviewsData } = await supabase
+        .from('reviews')
+        .select('id, week_start_date, wins, energy_score, created_at')
+        .in('id', reviewIds)
+        .order('created_at', { ascending: false });
+      setLinkedReviews(reviewsData || []);
+    } else {
+      setLinkedReviews([]);
+    }
+    setDetailLoading(false);
   };
 
   const addGoal = async () => {
@@ -112,6 +147,101 @@ const GoalsSection = () => {
   };
 
   if (loading) return null;
+
+  // Goal detail view
+  if (selectedGoal) {
+    const timeLabel = daysUntil(selectedGoal.target_date);
+    const isCompleted = selectedGoal.status === 'completed';
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.18 }}
+        className="glass-card p-6 mb-8"
+      >
+        <button
+          onClick={() => setSelectedGoal(null)}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back to goals
+        </button>
+
+        <div className="flex items-start gap-3 mb-5">
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5",
+            isCompleted ? "bg-primary/20" : "border-2 border-primary/40"
+          )}>
+            {isCompleted && <Check className="w-4 h-4 text-primary" />}
+            {!isCompleted && <Target className="w-4 h-4 text-primary" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className={cn(
+              "font-serif text-lg",
+              isCompleted ? "text-foreground/70 line-through" : "text-foreground"
+            )}>
+              {selectedGoal.title}
+            </h3>
+            <div className="flex items-center gap-3 mt-1">
+              <span className={cn(
+                "text-xs",
+                timeLabel === 'Overdue' ? 'text-destructive' : 'text-muted-foreground'
+              )}>
+                {isCompleted ? 'Completed' : timeLabel}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Target: {new Date(selectedGoal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-3">
+          <TrendingUp className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium text-foreground">
+            Linked Reviews ({linkedReviews.length})
+          </span>
+        </div>
+
+        {detailLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+        ) : linkedReviews.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4">
+            No reviews linked to this goal yet. Link reviews during your weekly check-in.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {linkedReviews.map((r, i) => (
+              <motion.button
+                key={r.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => navigate(`/insights/${r.id}`)}
+                className="w-full text-left p-3.5 rounded-xl bg-background/40 border border-border/30 hover:border-primary/30 transition-colors group"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Week of {new Date(r.week_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Zap className="w-3 h-3" />
+                    {r.energy_score}/10
+                  </div>
+                </div>
+                <p className="text-sm text-foreground mt-1 truncate">
+                  {r.wins || 'Review completed'}
+                </p>
+              </motion.button>
+            ))}
+          </div>
+        )}
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -213,10 +343,11 @@ const GoalsSection = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30 group"
+                    className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30 group cursor-pointer hover:border-primary/30 transition-colors"
+                    onClick={() => openGoalDetail(goal)}
                   >
                     <button
-                      onClick={() => completeGoal(goal.id)}
+                      onClick={(e) => { e.stopPropagation(); completeGoal(goal.id); }}
                       className="w-6 h-6 rounded-full border-2 border-primary/40 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0"
                       title="Mark complete"
                     >
@@ -237,7 +368,7 @@ const GoalsSection = () => {
                       </div>
                     </div>
                     <button
-                      onClick={() => archiveGoal(goal.id)}
+                      onClick={(e) => { e.stopPropagation(); archiveGoal(goal.id); }}
                       className="text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
                       title="Remove"
                     >
@@ -265,7 +396,8 @@ const GoalsSection = () => {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30 cursor-pointer hover:border-primary/30 transition-colors"
+                  onClick={() => openGoalDetail(goal)}
                 >
                   <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                     <Check className="w-3 h-3 text-primary" />
