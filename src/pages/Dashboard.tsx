@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
-import { PenLine, Calendar, TrendingUp, ChevronRight } from 'lucide-react';
+import { PenLine, Calendar, TrendingUp, ChevronRight, Sparkles, ArrowUpRight, ArrowDownRight, Minus, Loader2 } from 'lucide-react';
 
 interface ReviewSummary {
   id: string;
@@ -13,6 +13,21 @@ interface ReviewSummary {
   wins: string;
   energy_score: number;
   created_at: string;
+}
+
+interface Pattern {
+  theme: string;
+  description: string;
+  frequency: string;
+  type: 'positive' | 'negative' | 'neutral';
+  advice: string;
+}
+
+interface PatternsData {
+  patterns: Pattern[];
+  energy_trend?: 'rising' | 'falling' | 'stable';
+  overall_insight?: string;
+  message?: string;
 }
 
 const MILESTONES = [4, 8, 12, 16, 24, 52];
@@ -23,6 +38,8 @@ const Dashboard = () => {
   const [reviews, setReviews] = useState<ReviewSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMilestone, setShowMilestone] = useState(false);
+  const [patternsData, setPatternsData] = useState<PatternsData | null>(null);
+  const [patternsLoading, setPatternsLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -34,10 +51,29 @@ const Dashboard = () => {
         .order('created_at', { ascending: false });
       setReviews(data || []);
       setLoading(false);
+      
+      // Fetch patterns if 2+ reviews
+      if (data && data.length >= 2) {
+        fetchPatterns();
+      }
     };
     fetchReviews();
     updateStreak();
   }, [user]);
+
+  const fetchPatterns = async () => {
+    setPatternsLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-patterns');
+      if (!error && data && !data.error) {
+        setPatternsData(data);
+      }
+    } catch (err) {
+      console.warn('Patterns fetch failed:', err);
+    } finally {
+      setPatternsLoading(false);
+    }
+  };
 
   const updateStreak = async () => {
     if (!user || !profile) return;
@@ -226,6 +262,70 @@ const Dashboard = () => {
             </div>
           </div>
         </motion.div>
+
+        {/* Patterns Section */}
+        {reviews.length >= 2 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="glass-card-accent p-6 mb-8"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h2 className="font-serif text-xl text-foreground">Your Patterns</h2>
+              {patternsData?.energy_trend && (
+                <div className="ml-auto flex items-center gap-1.5 text-sm text-muted-foreground">
+                  Energy:
+                  {patternsData.energy_trend === 'rising' && <ArrowUpRight className="w-4 h-4 text-green-400" />}
+                  {patternsData.energy_trend === 'falling' && <ArrowDownRight className="w-4 h-4 text-destructive" />}
+                  {patternsData.energy_trend === 'stable' && <Minus className="w-4 h-4 text-muted-foreground" />}
+                  <span className="capitalize">{patternsData.energy_trend}</span>
+                </div>
+              )}
+            </div>
+
+            {patternsLoading ? (
+              <div className="flex items-center justify-center py-8 gap-3">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">Analyzing your patterns...</span>
+              </div>
+            ) : patternsData?.patterns && patternsData.patterns.length > 0 ? (
+              <>
+                {patternsData.overall_insight && (
+                  <p className="text-sm text-muted-foreground mb-5">{patternsData.overall_insight}</p>
+                )}
+                <div className="space-y-3">
+                  {patternsData.patterns.map((p, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.08 }}
+                      className="bg-background/40 border border-border/30 rounded-xl p-4"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          p.type === 'positive' ? 'bg-green-400' :
+                          p.type === 'negative' ? 'bg-destructive' :
+                          'bg-muted-foreground'
+                        }`} />
+                        <span className="font-medium text-foreground text-sm">{p.theme}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{p.frequency}</span>
+                      </div>
+                      <p className="text-sm text-secondary-foreground mb-2">{p.description}</p>
+                      <p className="text-xs text-primary">💡 {p.advice}</p>
+                    </motion.div>
+                  ))}
+                </div>
+              </>
+            ) : patternsData?.message ? (
+              <p className="text-sm text-muted-foreground py-4">{patternsData.message}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground py-4">Complete more reviews to see your patterns emerge.</p>
+            )}
+          </motion.div>
+        )}
 
         {/* Past Reviews */}
         <motion.div
