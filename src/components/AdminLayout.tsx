@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Shield, LayoutDashboard, Users, FileText, Settings, LogOut, ChevronLeft } from 'lucide-react';
+import { Shield, LayoutDashboard, Users, FileText, Settings, LogOut, ChevronLeft, Target } from 'lucide-react';
 import WeekSenseLogo from '@/components/WeekSenseLogo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Overview', end: true },
   { to: '/admin/users', icon: Users, label: 'Users' },
   { to: '/admin/reviews', icon: FileText, label: 'Reviews' },
+  { to: '/admin/goals', icon: Target, label: 'Goals' },
   { to: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 

@@ -269,6 +269,33 @@ Deno.serve(async (req) => {
         return jsonResponse({ users: enrichedUsers, total: authData.total });
       }
 
+      case "list_goals": {
+        const { data, error } = await adminClient
+          .from("goals")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (error) throw error;
+
+        const userIds = [...new Set((data || []).map((g: any) => g.user_id))];
+        const { data: profiles } = userIds.length > 0
+          ? await adminClient.from("profiles").select("user_id, name").in("user_id", userIds)
+          : { data: [] };
+        const { data: authUsers } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 });
+        const emailMap: Record<string, string> = {};
+        authUsers?.users?.forEach((u: any) => { emailMap[u.id] = u.email || ''; });
+        const profileMap: Record<string, any> = {};
+        profiles?.forEach((p: any) => { profileMap[p.user_id] = p; });
+
+        const goals = (data || []).map((g: any) => ({
+          ...g,
+          user_name: profileMap[g.user_id]?.name || null,
+          user_email: emailMap[g.user_id] || null,
+        }));
+
+        return jsonResponse({ goals });
+      }
+
       default:
         return jsonResponse({ error: `Unknown action: ${action}` }, 400);
     }
