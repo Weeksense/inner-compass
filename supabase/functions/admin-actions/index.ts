@@ -180,7 +180,7 @@ Deno.serve(async (req) => {
 
       case "list_reviews": {
         const { page = 1, per_page = 50, user_id: uid, date_from, date_to } = params;
-        let query = adminClient.from("reviews").select("*, profiles!inner(name, avatar_url)", { count: "exact" });
+        let query = adminClient.from("reviews").select("*, profiles(name, avatar_url)", { count: "exact" });
         if (uid) query = query.eq("user_id", uid);
         if (date_from) query = query.gte("created_at", date_from);
         if (date_to) query = query.lte("created_at", date_to);
