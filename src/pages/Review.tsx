@@ -1,17 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { REVIEW_QUESTIONS, QUESTION_ICONS } from '@/lib/constants';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, Target, Check } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface ActiveGoal {
+  id: string;
+  title: string;
+  target_date: string;
+}
 
 const Review = () => {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<string[]>(Array(REVIEW_QUESTIONS.length).fill(''));
-  const [phase, setPhase] = useState<'questions' | 'processing' | 'done'>('questions');
+  const [phase, setPhase] = useState<'questions' | 'goals' | 'processing' | 'done'>('questions');
+  const [activeGoals, setActiveGoals] = useState<ActiveGoal[]>([]);
+  const [selectedGoalIds, setSelectedGoalIds] = useState<Set<string>>(new Set());
+  const [goalsLoading, setGoalsLoading] = useState(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -19,12 +28,47 @@ const Review = () => {
     if (currentQ < REVIEW_QUESTIONS.length - 1) {
       setCurrentQ(currentQ + 1);
     } else {
-      submitReview();
+      // After last question, check if user has active goals
+      loadGoalsAndProceed();
     }
   };
 
-  const submitReview = async () => {
+  const loadGoalsAndProceed = async () => {
+    setGoalsLoading(true);
+    try {
+      const { data } = await supabase
+        .from('goals')
+        .select('id, title, target_date')
+        .eq('user_id', user!.id)
+        .eq('status', 'active')
+        .order('target_date', { ascending: true });
+
+      if (data && data.length > 0) {
+        setActiveGoals(data);
+        setPhase('goals');
+      } else {
+        // No active goals, skip straight to submit
+        submitReview();
+      }
+    } catch {
+      submitReview();
+    } finally {
+      setGoalsLoading(false);
+    }
+  };
+
+  const toggleGoal = (goalId: string) => {
+    setSelectedGoalIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(goalId)) next.delete(goalId);
+      else next.add(goalId);
+      return next;
+    });
+  };
+
+  const submitReview = async (goalIds?: Set<string>) => {
     setPhase('processing');
+    const goalsToLink = goalIds || selectedGoalIds;
 
     try {
       // Calculate week start (Monday)
@@ -72,6 +116,15 @@ const Review = () => {
 
       if (error) throw error;
 
+      // Link goals to this review
+      if (goalsToLink.size > 0) {
+        const progressRows = Array.from(goalsToLink).map((goalId) => ({
+          goal_id: goalId,
+          review_id: data.id,
+        }));
+        await supabase.from('goal_progress').insert(progressRows);
+      }
+
       await new Promise(res => setTimeout(res, 1500));
       navigate(`/insights/${data.id}`);
     } catch (err: any) {
@@ -97,6 +150,93 @@ const Review = () => {
           <h2 className="font-serif text-3xl text-foreground mb-3">Processing your week...</h2>
           <p className="text-muted-foreground">Finding your patterns and insights</p>
         </motion.div>
+      </div>
+    );
+  }
+
+  // Goal check-in step
+  if (phase === 'goals') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Full progress bar */}
+        <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-muted">
+          <motion.div
+            className="h-full bg-primary"
+            animate={{ width: '100%' }}
+            transition={{ duration: 0.3 }}
+          />
+        </div>
+
+        <div className="flex-1 flex items-center justify-center px-6 py-20">
+          <div className="w-full max-w-2xl">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex items-center gap-3 mb-4 text-muted-foreground">
+                <Target className="w-6 h-6 text-primary" />
+                <span className="text-sm">Goal Check-in</span>
+              </div>
+
+              <h2 className="font-serif text-3xl md:text-4xl text-foreground mb-3 leading-snug">
+                Which goals did you make progress on?
+              </h2>
+              <p className="text-muted-foreground mb-8">Select any goals you worked toward this week. You can skip if none apply.</p>
+
+              <div className="space-y-3 mb-10">
+                {activeGoals.map((goal, i) => {
+                  const isSelected = selectedGoalIds.has(goal.id);
+                  return (
+                    <motion.button
+                      key={goal.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.06 }}
+                      onClick={() => toggleGoal(goal.id)}
+                      className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
+                        isSelected
+                          ? 'border-primary/50 bg-primary/10'
+                          : 'border-border/50 bg-muted/20 hover:border-border'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                        isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/30'
+                      }`}>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-foreground font-medium truncate">{goal.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Target: {new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => { setPhase('questions'); }}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ← Back
+                </button>
+                <div className="flex gap-3">
+                  <Button variant="ghost" onClick={() => submitReview(new Set())}>
+                    Skip
+                  </Button>
+                  <Button onClick={() => submitReview()} size="lg">
+                    {selectedGoalIds.size > 0
+                      ? `Finish with ${selectedGoalIds.size} goal${selectedGoalIds.size > 1 ? 's' : ''}`
+                      : 'Finish Review'}
+                    <ArrowRight className="ml-2 w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -161,7 +301,10 @@ const Review = () => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
                     >
-                      <Button onClick={handleNext} size="lg">
+                      <Button onClick={handleNext} size="lg" disabled={goalsLoading}>
+                        {goalsLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : null}
                         {currentQ === REVIEW_QUESTIONS.length - 1 ? 'Finish Review' : 'Next'}
                         <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>

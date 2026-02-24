@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Target, Plus, Check, Trash2, X, CalendarIcon, Trophy } from 'lucide-react';
+import { Target, Plus, Check, Trash2, X, CalendarIcon, Trophy, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ const GoalsSection = () => {
   const { user } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [completedGoals, setCompletedGoals] = useState<Goal[]>([]);
+  const [progressCounts, setProgressCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -50,8 +51,26 @@ const GoalsSection = () => {
         .order('updated_at', { ascending: false })
         .limit(20),
     ]);
+
+    const allGoals = [...(activeRes.data || []), ...(completedRes.data || [])];
     setGoals(activeRes.data || []);
     setCompletedGoals(completedRes.data || []);
+
+    // Fetch progress counts for all goals
+    if (allGoals.length > 0) {
+      const goalIds = allGoals.map((g) => g.id);
+      const { data: progressData } = await supabase
+        .from('goal_progress')
+        .select('goal_id')
+        .in('goal_id', goalIds);
+
+      const counts: Record<string, number> = {};
+      progressData?.forEach((p) => {
+        counts[p.goal_id] = (counts[p.goal_id] || 0) + 1;
+      });
+      setProgressCounts(counts);
+    }
+
     setLoading(false);
   };
 
@@ -187,6 +206,7 @@ const GoalsSection = () => {
               {goals.map((goal, i) => {
                 const timeLabel = daysUntil(goal.target_date);
                 const isOverdue = timeLabel === 'Overdue';
+                const progressCount = progressCounts[goal.id] || 0;
                 return (
                   <motion.div
                     key={goal.id}
@@ -204,9 +224,17 @@ const GoalsSection = () => {
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-foreground truncate">{goal.title}</p>
-                      <p className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
-                        {timeLabel}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <p className={`text-xs ${isOverdue ? 'text-destructive' : 'text-muted-foreground'}`}>
+                          {timeLabel}
+                        </p>
+                        {progressCount > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-primary">
+                            <TrendingUp className="w-3 h-3" />
+                            {progressCount} review{progressCount > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <button
                       onClick={() => archiveGoal(goal.id)}
@@ -229,25 +257,36 @@ const GoalsSection = () => {
           {completedGoals.length === 0 ? (
             <p className="text-sm text-muted-foreground py-2">No completed goals yet.</p>
           ) : (
-            completedGoals.map((goal, i) => (
-              <motion.div
-                key={goal.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30"
-              >
-                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Check className="w-3 h-3 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-foreground/70 line-through truncate">{goal.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Target: {new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  </p>
-                </div>
-              </motion.div>
-            ))
+            completedGoals.map((goal, i) => {
+              const progressCount = progressCounts[goal.id] || 0;
+              return (
+                <motion.div
+                  key={goal.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-background/40 border border-border/30"
+                >
+                  <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="w-3 h-3 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-foreground/70 line-through truncate">{goal.title}</p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs text-muted-foreground">
+                        Target: {new Date(goal.target_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                      {progressCount > 0 && (
+                        <span className="flex items-center gap-1 text-xs text-primary">
+                          <TrendingUp className="w-3 h-3" />
+                          {progressCount} review{progressCount > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })
           )}
         </div>
       )}
