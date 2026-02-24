@@ -12,6 +12,7 @@ import Onboarding from "./pages/Onboarding";
 import Review from "./pages/Review";
 import Insights from "./pages/Insights";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,9 @@ const App = () => (
             } />
             <Route path="/dashboard" element={
               <ProtectedRoute><OnboardingGuard><Dashboard /></OnboardingGuard></ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute><OnboardingGuard><Profile /></OnboardingGuard></ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
           </Routes>
