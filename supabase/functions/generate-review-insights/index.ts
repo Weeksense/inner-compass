@@ -104,8 +104,11 @@ ${formattedAnswers}`;
     }
 
     const aiData = await response.json();
-    const text = aiData.content?.[0]?.text;
+    let text = aiData.content?.[0]?.text;
     if (!text) throw new Error("No response text from Anthropic");
+
+    // Strip markdown code fences if present
+    text = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
 
     const insights = JSON.parse(text);
 
